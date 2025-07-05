@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:panorama_viewer/panorama_viewer.dart';
+import 'package:flutter/foundation.dart';
 
 class ViewPage extends StatelessWidget {
   const ViewPage({super.key});
@@ -19,20 +20,22 @@ class ViewPage extends StatelessWidget {
         title: Center(
           child: SizedBox(
             height: kToolbarHeight * 0.8,
-            child: Image.asset("assets/images/logo.png"),
+            child: Image.asset(
+              "assets/images/logo.png",
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(Icons.local_cafe, color: Colors.white);
+              },
+            ),
           ),
         ),
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 360° Image Section
+            // 360° Image Section with Mobile Support
             SizedBox(
               height: _getPanoramaHeight(context),
-              child: PanoramaViewer(
-                animSpeed: 0.05,
-                child: Image.asset('assets/images/360view.jpg'),
-              ),
+              child: _buildPanoramaViewer(context),
             ),
 
             // First Info Section - Image on Left
@@ -50,6 +53,134 @@ class ViewPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPanoramaViewer(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isWeb = kIsWeb;
+    
+    // For mobile web, use a fallback approach
+    if (isMobile && isWeb) {
+      return _buildMobilePanoramaFallback(context);
+    }
+    
+    // For desktop and tablet, use the regular PanoramaViewer
+    return SizedBox(
+      width: double.infinity,
+      height: _getPanoramaHeight(context),
+      child: PanoramaViewer(
+        animSpeed: 0.05,
+        child: Image.asset(
+          'assets/images/360v.jpg',
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildErrorFallback(context);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobilePanoramaFallback(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: _getPanoramaHeight(context),
+      decoration: const BoxDecoration(
+        color: Colors.black,
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background 360 image
+          Image.asset(
+            'assets/images/360view.jpg',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildErrorFallback(context);
+            },
+          ),
+          // Overlay with instructions
+          Positioned(
+            top: 20,
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                '360° View - Tap and drag to explore',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          // Gesture detector for basic interaction
+          GestureDetector(
+            onPanUpdate: (details) {
+              // Basic pan functionality - you can enhance this
+            },
+            onTap: () {
+              // Show a message or open fullscreen view
+              _showPanoramaMessage(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorFallback(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: _getPanoramaHeight(context),
+      color: Colors.grey[900],
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.panorama,
+              color: Colors.white54,
+              size: 60,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Unable to load 360° view',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Please try refreshing the page',
+              style: TextStyle(
+                color: Colors.white38,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPanoramaMessage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('360° view optimized for desktop. Try rotating your device!'),
+        backgroundColor: Colors.brown[800],
+        duration: const Duration(seconds: 2),
       ),
     );
   }
